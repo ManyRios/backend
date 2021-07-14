@@ -41,12 +41,17 @@ const userSchema = new mongoose.Schema({
     required: false,
   },
   openBets: {
-    type: [Object],
+    type: [mongoose.Schema.Types.ObjectId],
     required: true,
     default: [],
   },
   closedBets: {
-    type: [Object],
+    type: [{
+        betId: mongoose.Schema.Types.ObjectId,
+        outcome: Number,
+        sellAmount: String,
+        earnedTokens: String,
+    }],
     required: true,
     default: [],
   },

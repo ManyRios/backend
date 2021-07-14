@@ -284,9 +284,7 @@ const getOpenBetsList = async (request, response) => {
     try {
         if (user) {
             const userId     = user.id;
-            const openBetIds = user.openBets.filter(
-                (value, index, self) => self.indexOf(value) === index,
-            );
+            const openBetIds = user.openBets;
             const openBets   = [];
 
             for (const openBetId of openBetIds) {

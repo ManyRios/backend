@@ -319,7 +319,12 @@ const payoutBet = async (req, res, next) => {
                 console.debug(LOG_TAG, 'Payed out Bet');
                 //TODO store more information in closedBets
                 user.openBets = user.openBets.filter(item => item !== bet.id);
-                user.closedBets.push(bet.id);
+                user.closedBets.push({
+                    betId: bet.id,
+                    outcome: undefined,
+                    sellAmount: undefined,
+                    earnedTokens: undefined
+                });
 
                 await userService.saveUser(user, session);
 
