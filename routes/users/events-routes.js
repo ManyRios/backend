@@ -84,11 +84,6 @@ router.post(
 );
 
 router.get(
-    "/bet/:id/payout",
-    betController.payoutBet
-);
-
-router.get(
     "/chat-messages/:id",
     [
         check("id").notEmpty()

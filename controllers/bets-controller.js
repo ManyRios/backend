@@ -296,57 +296,8 @@ const calculateSellOutcome = async (req, res, next) => {
     }
 };
 
-const payoutBet = async (req, res, next) => {
-    const LOG_TAG = '[PAYOUT-BET]';
-    // Validating User Inputs
-    const errors  = validationResult(req);
-    if (!errors.isEmpty()) {
-        return next(res.status(422).send('Invalid input passed, please check it'));
-    }
-
-    try {
-        const { id } = req.params;
-
-        const session = await User.startSession();
-        let bet = {};
-
-        try {
-            await session.withTransaction(async () => {
-                console.debug(LOG_TAG, 'Payout Bet', id, req.user.id);
-                bet  = await eventService.getBet(id, session);
-                const user = await userService.getUserById(req.user.id, session);
-
-                console.debug(LOG_TAG, 'Payed out Bet');
-                //TODO store more information in closedBets
-                user.openBets = user.openBets.filter(item => item !== bet.id);
-                user.closedBets.push({
-                    betId: bet.id,
-                    outcome: undefined,
-                    sellAmount: undefined,
-                    earnedTokens: undefined
-                });
-
-                await userService.saveUser(user, session);
-
-                console.debug(LOG_TAG, 'Requesting Bet Payout');
-                const betContract = new BetContract(id, bet.outcomes.length);
-                await betContract.getPayout(req.user.id);
-            });
-
-        } finally {
-            await session.endSession();
-        }
-        res.status(201).json(bet);
-    } catch (err) {
-        console.error(err.message);
-        let error = res.status(422).send(err.message);
-        next(error);
-    }
-};
-
 exports.createBet = createBet;
 exports.placeBet = placeBet;
 exports.pullOutBet = pullOutBet;
 exports.calculateBuyOutcome = calculateBuyOutcome;
 exports.calculateSellOutcome = calculateSellOutcome;
-exports.payoutBet        = payoutBet;
