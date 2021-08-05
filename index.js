@@ -11,6 +11,8 @@ const adminService = require('./services/admin-service');
 
 const { initBetsJobs } = require("./jobs/bets-jobs");
 
+const { getAccount } = require("./util/web3");
+
 // Import mongoose to connect to Database
 const mongoose = require('mongoose');
 
@@ -38,6 +40,8 @@ mongoose
 
 adminService.setMongoose(mongoose);
 adminService.initialize();
+
+getAccount().then(accounts => console.log(`Using ETH Account: ${accounts}`));
 
 //Import Socket.io service
 const websocketService = require('./services/websocket-service');

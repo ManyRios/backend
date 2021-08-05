@@ -7,6 +7,7 @@ const websocketService = require('./websocket-service');
 const smsService = require('./sms-notification-service');
 
 const { BetContract, Erc20 } = require('smart_contract_mock');
+const {createMarketMaker, getFixedProductMarketMaker, getWallfairToken, getAccount} = require("../util/web3");
 const EVNT                   = new Erc20('EVNT');
 
 const BET_STATUS = {
@@ -125,17 +126,32 @@ exports.betCreated = async (bet, userId) => {
     }
 };
 
+exports.createMarketMaker = async (outcomeSize) => {
+    console.log(typeof process.env.OFFCHAIN)
+    if (process.env.OFFCHAIN === 'true') {
+        return '0x0'
+    }
+    return await createMarketMaker(outcomeSize);
+}
+
 
 exports.provideLiquidityToBet = async (createBet) => {
     const LOG_TAG = '[CREATE-BET]';
-    const liquidityAmount                                           = 214748n;
-    const liquidityProviderWallet = 'LIQUIDITY_' + createBet.id;
-    const betContract             = new BetContract(createBet.id, createBet.outcomes.length);
+    const liquidityAmount = 214748n;
+    if (process.env.OFFCHAIN === 'true') {
+        const liquidityProviderWallet = 'LIQUIDITY_' + createBet.id;
+        const betContract             = new BetContract(createBet.id, createBet.outcomes.length);
 
-    console.debug(LOG_TAG, 'Minting new Tokens');
-    await EVNT.mint(liquidityProviderWallet, liquidityAmount * EVNT.ONE);
-    console.debug(LOG_TAG, 'Adding Liquidity to the Event');
-    await betContract.addLiquidity(liquidityProviderWallet, liquidityAmount * EVNT.ONE);
+        console.debug(LOG_TAG, 'Minting new Tokens');
+        await EVNT.mint(liquidityProviderWallet, liquidityAmount * EVNT.ONE);
+        console.debug(LOG_TAG, 'Adding Liquidity to the Event');
+        await betContract.addLiquidity(liquidityProviderWallet, liquidityAmount * EVNT.ONE);
+    } else {
+        const account = await getAccount();
+        await getWallfairToken().methods.mint(liquidityAmount).send({from: account})
+        await getWallfairToken().methods.approve(createBet.marketMakerAddress, liquidityAmount).send({from: account});
+        await getFixedProductMarketMaker(createBet.marketMakerAddress).methods.addFunding(liquidityAmount, []).send({from: account});
+    }
 }
 
 exports.saveEvent = async (event, session) => {

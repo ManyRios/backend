@@ -23,6 +23,11 @@ const betSchema = new mongoose.Schema({
     outcomes: [{
         type: Outcome
     }],
+    marketMakerAddress: {
+        type: String,
+        required: true,
+        max: 255,
+    },
     finalOutcome: {
         type: String,
         required: false,

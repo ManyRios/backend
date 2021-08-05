@@ -16,6 +16,7 @@ const eventService           = require('../services/event-service');
 const userService            = require('../services/user-service');
 
 const { BetContract, Erc20 } = require('smart_contract_mock');
+const {getFixedProductMarketMaker, getAccount} = require("../util/web3");
 const EVNT                   = new Erc20('EVNT');
 
 const createBet = async (req, res, next) => {
@@ -30,6 +31,7 @@ const createBet = async (req, res, next) => {
         // Defining User Inputs
         const { eventId, marketQuestion, description, hot, outcomes, endDate } = req.body;
 
+        const marketMakerAddress = await eventService.createMarketMaker(outcomes.length);
 
         let event = await eventService.getEvent(eventId);
 
@@ -42,8 +44,10 @@ const createBet = async (req, res, next) => {
             ({ index, name: outcome.value })
         );
 
+
         const createBet = new Bet({
             marketQuestion: marketQuestion,
+            marketMakerAddress: marketMakerAddress,
             description:    description,
             hot:            hot,
             outcomes:       outcomesDb,
@@ -78,7 +82,7 @@ const createBet = async (req, res, next) => {
 
         res.status(201).json(event);
     } catch (err) {
-        console.error(err.message);
+        console.error(err);
         let error = res.status(422).send(err.message);
         next(error);
     }
@@ -239,7 +243,6 @@ const calculateBuyOutcome = async (req, res, next) => {
         const bet = await Bet.findById(id);
 
         console.debug(LOG_TAG, "Calculating buy outcomes");
-        const betContract = new BetContract(id, bet.outcomes.length);
 
         let buyAmount = parseFloat(amount).toFixed(4);
         const bigAmount = new bigDecimal(buyAmount.toString().replace('.', ''));
@@ -248,7 +251,16 @@ const calculateBuyOutcome = async (req, res, next) => {
         const result = [];
 
         for (const outcome of bet.outcomes) {
-            const outcomeSellAmount  = await betContract.calcBuy(buyAmount, outcome.index);
+            let outcomeSellAmount;
+            if (process.env.OFFCHAIN === 'true') {
+                const betContract = new BetContract(id, bet.outcomes.length);
+                outcomeSellAmount = await betContract.calcBuy(buyAmount, outcome.index);
+                console.log()
+           } else {
+                const betContract = getFixedProductMarketMaker(bet.marketMakerAddress).methods;
+                const account = await getAccount();
+                outcomeSellAmount = await betContract.calcBuyAmount(buyAmount, outcome.index).call({from: account});
+            }
             const bigAmount = new bigDecimal(outcomeSellAmount);
             result.push({index: outcome.index, outcome: bigAmount.getPrettyValue(4, '.')});
         }
