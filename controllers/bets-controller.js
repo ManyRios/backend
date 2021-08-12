@@ -243,6 +243,12 @@ const calculateBuyOutcome = async (req, res, next) => {
         const bet = await Bet.findById(id);
 
         console.debug(LOG_TAG, "Calculating buy outcomes");
+        let betContract;
+        if (process.env.OFFCHAIN === 'true') {
+            betContract = new BetContract(id, bet.outcomes.length);
+        } else {
+            betContract = getFixedProductMarketMaker(bet.marketMakerAddress).methods;
+        }
 
         let buyAmount = parseFloat(amount).toFixed(4);
         const bigAmount = new bigDecimal(buyAmount.toString().replace('.', ''));
@@ -253,11 +259,9 @@ const calculateBuyOutcome = async (req, res, next) => {
         for (const outcome of bet.outcomes) {
             let outcomeSellAmount;
             if (process.env.OFFCHAIN === 'true') {
-                const betContract = new BetContract(id, bet.outcomes.length);
                 outcomeSellAmount = await betContract.calcBuy(buyAmount, outcome.index);
                 console.log()
            } else {
-                const betContract = getFixedProductMarketMaker(bet.marketMakerAddress).methods;
                 const account = await getAccount();
                 outcomeSellAmount = await betContract.calcBuyAmount(buyAmount, outcome.index).call({from: account});
             }
@@ -296,8 +300,8 @@ const calculateSellOutcome = async (req, res, next) => {
 
         console.debug(LOG_TAG, 'Calculating Sell Outcomes');
         const betContract = new BetContract(id, bet.outcomes.length);
-        let sellAmount = parseFloat(amount).toFixed(4);
 
+        let sellAmount = parseFloat(amount).toFixed(4);
         const bigAmount = new bigDecimal(sellAmount.toString().replace('.', ''));
 
         const result = [];
